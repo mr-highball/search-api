@@ -1,0 +1,6 @@
+[submodule "src/ezthreads"]
+	path = src/ezthreads
+	url = https://github.com/mr-highball/ezthreads.git
+[submodule "src/fundamentals5"]
+	path = src/fundamentals5
+	url = https://github.com/fundamentalslib/fundamentals5.git
