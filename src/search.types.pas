@@ -5,7 +5,7 @@ unit search.types;
 interface
 
 uses
-  Classes, SysUtils, Generics.Collections;
+  Classes, SysUtils, fgl, ezthreads;
 
 type
 
@@ -31,6 +31,11 @@ type
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
+    (*
+      operations supported by the search api.
+      note: most cases search apis will be uni-directional (forward) because
+      results of the prior search request will be stored (unless manually cleared)
+    *)
     property SupportedOperations : TPaginationOperations read GetOperations;
 
     //--------------------------------------------------------------------------
@@ -52,7 +57,7 @@ type
   (*
     broad categories for different types of resources an ISearchAPI can return
   *)
-  TResourceCategory = (rcURI, rcBinary, rcDocument);
+  TResourceCategory = (rcURI, rcBinary, rcDocument, rcCustom);
 
   TResourceCategories = set of TResourceCategory;
 
@@ -63,7 +68,7 @@ type
   TURITypes = set of TURIType;
 
   (*
-    subtype for the rcMedia category
+    subtype for the rcBinary category
   *)
   TBinaryType = (btImage, btVideo, btMusic, btCustom);
   TBinaryTypes = set of TBinaryType;
@@ -88,6 +93,9 @@ type
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
+    (*
+      broad resource category
+    *)
     property Category : TResourceCategory read GetCategory;
   end;
 
@@ -107,38 +115,129 @@ type
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
+    (*
+      type for this uri
+    *)
     property URIType : TURIType read GetURIType;
+
+    (*
+      uri string for this resource
+    *)
     property URI : String read GetURI write SetURI;
   end;
 
   { IBinaryResource }
-
+  (*
+    specialized resource for binary content
+  *)
   IBinaryResource = interface(IURIResource)
     ['{0513D7C5-D68A-411A-97D3-C8B205E4BE17}']
     //--------------------------------------------------------------------------
     //property methods
     //--------------------------------------------------------------------------
     function GetBinaryType: TBinaryType;
-    function GetMaxChunkSize: Cardinal;
-    function GetMinChunkSize: Cardinal;
-    function GetSupportChunk: Boolean;
+    function GetData: TBytes;
+    function GetLazyLoad: Boolean;
+    procedure SetLazyLoad(Const AValue: Boolean);
 
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
+    (*
+      current type of the binary data
+    *)
     property BinaryType : TBinaryType read GetBinaryType;
-    property SupportsChunking : Boolean read GetSupportChunk;
-    property MinChunkSize : Cardinal read GetMinChunkSize;
-    property MaxChunkSize : Cardinal read GetMaxChunkSize;
+
+    (*
+      when true, binary data will not be fetched until requested
+    *)
+    property LazyLoad : Boolean read GetLazyLoad write SetLazyLoad;
+
+    (*
+      binary data for this resource
+    *)
+    property Data : TBytes read GetData;
 
     //--------------------------------------------------------------------------
     //methods
     //--------------------------------------------------------------------------
-    function Fetch(Out Buffer : TBytes;Out ChunkNumber : Integer;
-      Out Finished : Boolean;Out Error : String;
-      Const AChunkSize : Cardinal = 0) : Boolean;overload;
-    function Fetch(Out Buffer : TBytes;Out ChunkNumber : Integer;
-      Out Finished : Boolean) : Boolean;overload;
+    (*
+      fetches the binary data. alternatively the data property can be
+      used to read the bytes
+    *)
+    function Fetch(Out Buffer : TBytes;Out Error : String) : Boolean;overload;
+    function Fetch(Out Buffer : TBytes) : Boolean;overload;
+    function Fetch(Out Error : String) : Boolean;overload;
+  end;
+
+  { TODO -ohighball : maybe add a binary resource which supports chunking?
+                      this would allow for playing back buffered media without
+                      having to download the entire content}
+
+  (*
+    specialized resource for document category.
+    note: currently this is the same as an IURIResource, so
+          for further specialized content, a new interface would need
+          to be created (for example, PDF's could be an IPDFResource)
+  *)
+  IDocumentResource = interface(IURIResource)
+    ['{BFF4836F-BDEA-4E6B-BC4C-BB6593BA7F3A}']
+  end;
+
+  (*
+    custom resource types will need to inherit from this interface.
+    this may not be used, since most cases should fall into the above
+    categories, but stubbed out just in case
+  *)
+  ICustomResource = interface(IResource)
+    ['{5B4C48A7-DC3E-4ECA-9899-4CC4EB7F0CD3}']
+  end;
+
+  (*
+    collection to store resources
+  *)
+  TResourceCollection = TFPGInterfacedObjectList<IResource>;
+
+  { ISearchResult }
+  (*
+    interface that stores resources in a collection as well
+    as the worker thread which can be used to for events and settings
+    or to be used for await
+  *)
+  ISearchResult = interface
+    ['{361100FB-CA87-42E4-B073-EEE038048B82}']
+    //--------------------------------------------------------------------------
+    //property methods
+    //--------------------------------------------------------------------------
+    function GetCollection: TResourceCollection;
+    function GetLastError: String;
+    function GetSuccess: Boolean;
+    function GetThread: IEZThread;
+
+    //--------------------------------------------------------------------------
+    //properties
+    //--------------------------------------------------------------------------
+    (*
+      contains the resources that the search provided
+    *)
+    property Collection : TResourceCollection read GetCollection;
+
+    (*
+      used to check if the search was succesfull
+    *)
+    property Success : Boolean read GetSuccess;
+
+    (*
+      if the search failed for some reason (check success property)
+      this will be populated with the reason
+    *)
+    property LastError : String read GetLastError;
+
+    (*
+      internal worker thread used by this result.
+      can be used for await, or prior to search for settings and events
+    *)
+    property Thread : IEZThread read GetThread;
   end;
 
   { ISearchSettings }
@@ -147,6 +246,14 @@ type
   *)
   ISearchSettings = interface
     ['{B6BC6B6B-54AA-442F-A74E-104A6F6F730F}']
+    //--------------------------------------------------------------------------
+    //property methods
+    //--------------------------------------------------------------------------
+
+    //--------------------------------------------------------------------------
+    //properties
+    //--------------------------------------------------------------------------
+    //property Query? query operator pair - AND / NOT / ETC... ?
   end;
 
   { IResourceSettings }
@@ -164,9 +271,24 @@ type
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
+    (*
+      the broad resource categories supported by a search api instance
+    *)
     property SupportedCategories : TResourceCategories read GetCategories;
+
+    (*
+      what URI schemes are supported
+    *)
     property SupportedURIs : TURITypes read GetURIs;
+
+    (*
+      what media types are supported
+    *)
     property SupportedMedia : TBinaryTypes read GetMedia;
+
+    (*
+      what document types are supported
+    *)
     property SupportedDocuments : TDocumentTypes read GetDocs;
   end;
 
@@ -179,15 +301,33 @@ type
     //--------------------------------------------------------------------------
     function GetPage: IPaginated;
     function GetResourceSettings: IResourceSettings;
+    function GetResult: ISearchResult;
     function GetSettings: ISearchSettings;
     procedure SetSettings(Const AValue: ISearchSettings);
 
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
+    (*
+      used for controlling paging
+    *)
     property Page : IPaginated read GetPage;
+
+    (*
+      settings specific to the type of search api
+    *)
     property Settings : ISearchSettings read GetSettings write SetSettings;
+
+    (*
+      provides insight into what types of resources are supported by
+      this particular search api instance
+    *)
     property ResourceSettings : IResourceSettings read GetResourceSettings;
+
+    (*
+      stores the result when a search is performed, or a page is flipped
+    *)
+    property Result : ISearchResult read GetResult;
 
     //--------------------------------------------------------------------------
     //methods

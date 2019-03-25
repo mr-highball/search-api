@@ -16,16 +16,28 @@ type
 
   public
     procedure TestPagination;
+    procedure TestAPI;
   end;
 
 var
   MainForm: TMainForm;
 
 implementation
-
+uses
+  ezthreads;
 {$R *.lfm}
 
 { TMainForm }
+
+procedure TMainForm.TestAPI;
+var
+  LAPI:ISearchAPI;
+begin
+  LAPI.Result.Thread
+    .Settings.UpdateMaxRuntime(2000).Thread
+    .Events;
+  Await(LAPI.Result.Thread);
+end;
 
 procedure TMainForm.TestPagination;
 var
