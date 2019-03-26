@@ -7,7 +7,12 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, main;
+  Forms,
+  main,
+  search.types,
+  search.paginated,
+  search.resource,
+  search.result;
 
 {$R *.res}
 

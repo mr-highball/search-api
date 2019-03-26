@@ -1,3 +1,25 @@
+{ search-api
+
+  Copyright (c) 2019 mr-highball
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to
+  deal in the Software without restriction, including without limitation the
+  rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+  sell copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+}
 unit search.types;
 
 {$mode delphi}
@@ -70,7 +92,7 @@ type
   (*
     subtype for the rcBinary category
   *)
-  TBinaryType = (btImage, btVideo, btMusic, btCustom);
+  TBinaryType = (btImage, btVideo, btMusic, btFile, btCustom);
   TBinaryTypes = set of TBinaryType;
 
   (*
@@ -137,8 +159,7 @@ type
     //--------------------------------------------------------------------------
     function GetBinaryType: TBinaryType;
     function GetData: TBytes;
-    function GetLazyLoad: Boolean;
-    procedure SetLazyLoad(Const AValue: Boolean);
+    procedure SetData(Const AValue: TBytes);
 
     //--------------------------------------------------------------------------
     //properties
@@ -149,25 +170,9 @@ type
     property BinaryType : TBinaryType read GetBinaryType;
 
     (*
-      when true, binary data will not be fetched until requested
-    *)
-    property LazyLoad : Boolean read GetLazyLoad write SetLazyLoad;
-
-    (*
       binary data for this resource
     *)
-    property Data : TBytes read GetData;
-
-    //--------------------------------------------------------------------------
-    //methods
-    //--------------------------------------------------------------------------
-    (*
-      fetches the binary data. alternatively the data property can be
-      used to read the bytes
-    *)
-    function Fetch(Out Buffer : TBytes;Out Error : String) : Boolean;overload;
-    function Fetch(Out Buffer : TBytes) : Boolean;overload;
-    function Fetch(Out Error : String) : Boolean;overload;
+    property Data : TBytes read GetData write SetData;
   end;
 
   { TODO -ohighball : maybe add a binary resource which supports chunking?
@@ -198,6 +203,9 @@ type
   *)
   TResourceCollection = TFPGInterfacedObjectList<IResource>;
 
+  //forward
+  ISearchAPI = interface;
+
   { ISearchResult }
   (*
     interface that stores resources in a collection as well
@@ -211,6 +219,7 @@ type
     //--------------------------------------------------------------------------
     function GetCollection: TResourceCollection;
     function GetLastError: String;
+    function GetParent: ISearchAPI;
     function GetSuccess: Boolean;
     function GetThread: IEZThread;
 
@@ -238,6 +247,79 @@ type
       can be used for await, or prior to search for settings and events
     *)
     property Thread : IEZThread read GetThread;
+
+    (*
+      parent search api this result belongs to
+    *)
+    property Parent : ISearchAPI read GetParent;
+  end;
+
+  TQueryOperation = (qoAnd, qoNot);
+  TQueryOperations = set of TQueryOperation;
+
+  { TQueryTerm }
+  (*
+    represents a single part of a query and the type of operation to apply
+  *)
+  TQueryTerm = record
+  strict private
+    FOperation: TQueryOperation;
+    FText: String;
+  public
+    property Text : String read FText write FText;
+    property Operation : TQueryOperation read FOperation write FOperation;
+    class operator Equal(Const A,B:TQueryTerm):Boolean;
+  end;
+
+  (*
+    collection of query terms
+  *)
+  TQueryCollection = TFPGList<TQueryTerm>;
+
+  //forward
+  ISearchSettings = interface;
+
+  { IQuery }
+  (*
+    interface which stores query terms in a collection
+  *)
+  IQuery = interface
+    ['{2BADF6D5-AE9E-4E4D-AE97-FCF863E5F4F8}']
+    //--------------------------------------------------------------------------
+    //property methods
+    //--------------------------------------------------------------------------
+    function GetCollection: TQueryCollection;
+    function GetOperations: TQueryOperations;
+    function GetParent: ISearchSettings;
+
+    //--------------------------------------------------------------------------
+    //properties
+    //--------------------------------------------------------------------------
+    property Collection : TQueryCollection read GetCollection;
+
+    (*
+      operations supported by the current search api
+    *)
+    property SupportedOperations : TQueryOperations read GetOperations;
+
+    (*
+      the parent ISearchSettings we belong to
+    *)
+    property Parent : ISearchSettings read GetParent;
+
+    //--------------------------------------------------------------------------
+    //methods
+    //--------------------------------------------------------------------------
+    (*
+      shorthand for Collection.Clear
+    *)
+    function Clear : IQuery;
+
+    (*
+      adds a query term to the collection
+    *)
+    function Add(Const AQuery : String;
+      Const AOperation : TQueryOperation = qoAnd) : IQuery;
   end;
 
   { ISearchSettings }
@@ -249,11 +331,21 @@ type
     //--------------------------------------------------------------------------
     //property methods
     //--------------------------------------------------------------------------
+    function GetQuery: IQuery;
+    function GetParent: ISearchAPI;
 
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
-    //property Query? query operator pair - AND / NOT / ETC... ?
+    (*
+      query used for searching
+    *)
+    property Query : IQuery read GetQuery;
+
+    (*
+      parent search api these settings belong to
+    *)
+    property Parent : ISearchAPI read GetParent;
   end;
 
   { IResourceSettings }
@@ -266,6 +358,7 @@ type
     function GetCategories: TResourceCategories;
     function GetDocs: TDocumentTypes;
     function GetMedia: TBinaryTypes;
+    function GetParent: ISearchAPI;
     function GetURIs: TURITypes;
 
     //--------------------------------------------------------------------------
@@ -290,10 +383,17 @@ type
       what document types are supported
     *)
     property SupportedDocuments : TDocumentTypes read GetDocs;
+
+    (*
+      parent search api these settings belong to
+    *)
+    property Parent : ISearchAPI read GetParent;
   end;
 
   { ISearchAPI }
-
+  (*
+    main interface for performing searches
+  *)
   ISearchAPI = interface
     ['{6D906CA4-E27A-48B6-8BFF-27B0FED71FC0}']
     //--------------------------------------------------------------------------
@@ -332,9 +432,47 @@ type
     //--------------------------------------------------------------------------
     //methods
     //--------------------------------------------------------------------------
+    (*
+      updates the current search settings
+    *)
+    function UpdateSettings(Const ASettings:ISearchSettings) : ISearchAPI;
+
+    (*
+      updates the current resource settings
+    *)
+    function UpdateResourceSettings(
+      Const ASettings:IResourceSettings) : ISearchAPI;
+
+    (*
+      begins the search with the current settings. to check status of
+      the search, ISearchAPI.Result can be inspected, and to block until
+      completion, this can be done:
+
+        //ezthreads needs to be in the uses section
+        Await(ISearchAPI.Result.Thread);
+    *)
+    function Search : ISearchAPI;
   end;
 
+  (*
+    collection to store search api's
+  *)
+  TSearchCollection = TFPGInterfacedObjectList<ISearchAPI>;
+
+  { TODO -ohighball : need to spec out a factor and register method for
+                      implementation classes to call. consider
+                      a method for passing in search category/subtype
+                      and return a search collection of backends that
+                      meet the criteria}
+
 implementation
+
+{ TQueryTerm }
+
+class operator TQueryTerm.Equal(const A, B: TQueryTerm): Boolean;
+begin
+  Result:=(A.Operation = B.Operation) and (A.Text.Equals(B.Text));
+end;
 
 end.
 
