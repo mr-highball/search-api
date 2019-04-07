@@ -12,7 +12,8 @@ uses
   search.types,
   search.paginated,
   search.resource,
-  search.result;
+  search.result,
+  search.query;
 
 {$R *.res}
 

@@ -38,8 +38,9 @@ type
   TPaginatedImpl = class(TInterfacedObject,IPaginated)
   strict private
     FOperations: TPaginationOperations;
-    function GetOperations: TPaginationOperations;
   strict protected
+    function GetOperations: TPaginationOperations;
+
     //children will need to override these
     function DoBack(out Error: String): Boolean;virtual;abstract;
     function DoNext(out Error: String): Boolean; overload;virtual;abstract;
