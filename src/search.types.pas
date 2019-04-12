@@ -447,7 +447,7 @@ type
         //ezthreads needs to be in the uses section
         Await(ISearchAPI.Result.Thread);
     *)
-    function Search : ISearchAPI;
+    function Search : ISearchResult;
   end;
 
   (*

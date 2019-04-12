@@ -39,6 +39,7 @@ type
   strict private
     FSettings: ISearchSettings;
     FResSettings: IResourceSettings;
+    FResult: ISearchResult;
   strict protected
     function GetPage: IPaginated;
     function GetResourceSettings: IResourceSettings;
@@ -48,11 +49,10 @@ type
     //children override
     function DoGetPage: IPaginated;virtual;abstract;
     function DoGetResourceSettings: IResourceSettings;virtual;abstract;
-    function DoGetResult: ISearchResult;virtual;abstract;
     function DoGetSettings: ISearchSettings;virtual;abstract;
     function DoGetEmptyResourceSettings: IResourceSettings;virtual;abstract;
     function DoGetEmptySearchSettings: ISearchSettings;virtual;abstract;
-    procedure DoSearch;virtual;abstract;
+    function DoSearch: ISearchResult;virtual;abstract;
   public
     //--------------------------------------------------------------------------
     //properties
@@ -67,7 +67,7 @@ type
     //--------------------------------------------------------------------------
     function EmptyResourceSettings: IResourceSettings;
     function EmptySettings: ISearchSettings;
-    function Search: ISearchAPI;
+    function Search: ISearchResult;
 
     constructor Create;virtual;overload;
     destructor destroy; override;
@@ -103,7 +103,11 @@ end;
 
 function TSearchAPIImpl.GetResult: ISearchResult;
 begin
-  Result:=DoGetResult;
+  //if we haven't searched yet, then call go ahead and do so
+  if not Assigned(FResult) then
+    Search;
+
+  Result:=FResult;
 end;
 
 function TSearchAPIImpl.GetSettings: ISearchSettings;
@@ -111,22 +115,24 @@ begin
   Result:=FSettings;
 end;
 
-function TSearchAPIImpl.Search: ISearchAPI;
+function TSearchAPIImpl.Search: ISearchResult;
 begin
-  Result:=Self as ISearchAPI;
-  DoSearch;
+  FResult:=DoSearch;
+  Result:=FResult;
 end;
 
 constructor TSearchAPIImpl.Create;
 begin
   EmptySettings;
   EmptyResourceSettings;
+  FResult:=nil;
 end;
 
 destructor TSearchAPIImpl.destroy;
 begin
   FSettings:=nil;
   FResSettings:=nil;
+  FResult:=nil;
   inherited destroy;
 end;
 
