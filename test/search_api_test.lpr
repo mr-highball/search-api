@@ -13,7 +13,10 @@ uses
   search.paginated,
   search.resource,
   search.result,
-  search.query;
+  search.query,
+  search.settings,
+  search.resourcesettings,
+  search.api;
 
 {$R *.res}
 

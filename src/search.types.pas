@@ -403,7 +403,6 @@ type
     function GetResourceSettings: IResourceSettings;
     function GetResult: ISearchResult;
     function GetSettings: ISearchSettings;
-    procedure SetSettings(Const AValue: ISearchSettings);
 
     //--------------------------------------------------------------------------
     //properties
@@ -416,7 +415,7 @@ type
     (*
       settings specific to the type of search api
     *)
-    property Settings : ISearchSettings read GetSettings write SetSettings;
+    property Settings : ISearchSettings read GetSettings;
 
     (*
       provides insight into what types of resources are supported by
@@ -432,16 +431,13 @@ type
     //--------------------------------------------------------------------------
     //methods
     //--------------------------------------------------------------------------
-    (*
-      updates the current search settings
-    *)
-    function UpdateSettings(Const ASettings:ISearchSettings) : ISearchAPI;
 
     (*
-      updates the current resource settings
+      clears the current settings to default values and allows
+      caller to adjust/update values (alternative to using settings properties)
     *)
-    function UpdateResourceSettings(
-      Const ASettings:IResourceSettings) : ISearchAPI;
+    function EmptySettings : ISearchSettings;
+    function EmptyResourceSettings : IResourceSettings;
 
     (*
       begins the search with the current settings. to check status of

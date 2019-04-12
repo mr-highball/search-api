@@ -67,8 +67,6 @@ begin
   //await it's completion
   Await(
     LAPI
-      .UpdateResourceSettings(nil)
-      .UpdateSettings(nil)
       .Settings
         .Query
           .Add('test')

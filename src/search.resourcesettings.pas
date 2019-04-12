@@ -20,7 +20,7 @@
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
   IN THE SOFTWARE.
 }
-unit search.query;
+unit search.resourcesettings;
 
 {$mode delphi}
 
@@ -31,97 +31,81 @@ uses
 
 type
 
-  { TQueryImpl }
+  { TResourceSettingsImpl }
   (*
-    base implementation of IQuery
+    base implementation for IResourceSettings
   *)
-  TQueryImpl = class(TInterfacedObject,IQuery)
+  TResourceSettingsImpl = class(TInterfacedObject,IResourceSettings)
   strict private
-    FCollection: TQueryCollection;
-    FParent: ISearchSettings;
+    FParent: ISearchAPI;
   strict protected
-    function GetCollection: TQueryCollection;
-    function GetOperations: TQueryOperations;
-    function GetParent: ISearchSettings;
+    function GetCategories: TResourceCategories;
+    function GetDocs: TDocumentTypes;
+    function GetMedia: TBinaryTypes;
+    function GetParent: ISearchAPI;
+    function GetURIs: TURITypes;
 
     //children override
-    function DoGetSupportedOperations: TQueryOperations;virtual;abstract;
+    function DoGetCategories: TResourceCategories;virtual;abstract;
+    function DoGetDocs: TDocumentTypes;virtual;abstract;
+    function DoGetMedia: TBinaryTypes;virtual;abstract;
+    function DoGetURIs: TURITypes;virtual;abstract;
   public
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
-    property Collection : TQueryCollection read GetCollection;
-    property SupportedOperations : TQueryOperations read GetOperations;
-    property Parent : ISearchSettings read GetParent;
+    property SupportedCategories : TResourceCategories read GetCategories;
+    property SupportedURIs : TURITypes read GetURIs;
+    property SupportedMedia : TBinaryTypes read GetMedia;
+    property SupportedDocuments : TDocumentTypes read GetDocs;
+    property Parent : ISearchAPI read GetParent;
 
     //--------------------------------------------------------------------------
     //methods
     //--------------------------------------------------------------------------
-    function Add(const AQuery: String;
-      const AOperation: TQueryOperation=qoAnd): IQuery;
-    function Clear: IQuery;
-
-    constructor Create(Const AParent: ISearchSettings);virtual;overload;
+    constructor Create(Const AParent: ISearchAPI);virtual;overload;
     destructor destroy; override;
   end;
 
 implementation
 
+{ TResourceSettingsImpl }
 
-{ TQueryImpl }
-
-function TQueryImpl.Add(const AQuery: String;
-  const AOperation: TQueryOperation): IQuery;
-var
-  LTerm: TQueryTerm;
+function TResourceSettingsImpl.GetCategories: TResourceCategories;
 begin
-  //initialize return and the query term
-  Result:=Self as IQuery;
-  LTerm.Text:=AQuery;
-  LTerm.Operation:=AOperation;
-
-  //we can exit if the term already exists
-  if FCollection.IndexOf(LTerm) > 0 then
-    Exit;
-
-  //add the term
-  FCollection.Add(LTerm);
+  Result:=DoGetCategories;
 end;
 
-function TQueryImpl.Clear: IQuery;
+function TResourceSettingsImpl.GetDocs: TDocumentTypes;
 begin
-  Result:=Self as IQuery;
-  FCollection.Clear;
+  Result:=DoGetDocs;
 end;
 
-constructor TQueryImpl.Create(Const AParent: ISearchSettings);
+function TResourceSettingsImpl.GetMedia: TBinaryTypes;
 begin
-  FCollection:=TQueryCollection.Create;
-  FParent:=AParent;
+  Result:=DoGetMedia
 end;
 
-destructor TQueryImpl.destroy;
-begin
-  FCollection.Free;
-  FParent:=nil;
-  inherited destroy;
-end;
-
-function TQueryImpl.GetCollection: TQueryCollection;
-begin
-  Result:=FCollection;
-end;
-
-function TQueryImpl.GetOperations: TQueryOperations;
-begin
-  Result:=DoGetSupportedOperations;
-end;
-
-function TQueryImpl.GetParent: ISearchSettings;
+function TResourceSettingsImpl.GetParent: ISearchAPI;
 begin
   Result:=FParent;
 end;
 
+function TResourceSettingsImpl.GetURIs: TURITypes;
+begin
+  Result:=DoGetURIs
+end;
+
+constructor TResourceSettingsImpl.Create(const AParent: ISearchAPI);
+begin
+  FParent:=AParent;
+end;
+
+destructor TResourceSettingsImpl.destroy;
+begin
+  FParent:=nil;
+  inherited destroy;
+end;
 
 end.
 

@@ -20,7 +20,7 @@
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
   IN THE SOFTWARE.
 }
-unit search.query;
+unit search.settings;
 
 {$mode delphi}
 
@@ -31,97 +31,59 @@ uses
 
 type
 
-  { TQueryImpl }
+  { TSearchSettingsImpl }
   (*
-    base implementation of IQuery
+    base implementation for ISearchSettings
   *)
-  TQueryImpl = class(TInterfacedObject,IQuery)
+  TSearchSettingsImpl = class(TInterfacedObject,ISearchSettings)
   strict private
-    FCollection: TQueryCollection;
-    FParent: ISearchSettings;
+    FParent: ISearchAPI;
+    FQuery: IQuery;
   strict protected
-    function GetCollection: TQueryCollection;
-    function GetOperations: TQueryOperations;
-    function GetParent: ISearchSettings;
-
-    //children override
-    function DoGetSupportedOperations: TQueryOperations;virtual;abstract;
+    function GetParent: ISearchAPI;
+    function GetQuery: IQuery;
   public
     //--------------------------------------------------------------------------
     //properties
     //--------------------------------------------------------------------------
-    property Collection : TQueryCollection read GetCollection;
-    property SupportedOperations : TQueryOperations read GetOperations;
-    property Parent : ISearchSettings read GetParent;
+    property Query : IQuery read GetQuery;
+    property Parent : ISearchAPI read GetParent;
 
     //--------------------------------------------------------------------------
     //methods
     //--------------------------------------------------------------------------
-    function Add(const AQuery: String;
-      const AOperation: TQueryOperation=qoAnd): IQuery;
-    function Clear: IQuery;
-
-    constructor Create(Const AParent: ISearchSettings);virtual;overload;
+    constructor Create(Const AParent: ISearchAPI;
+      Const AQuery: IQuery);virtual;overload;
     destructor destroy; override;
   end;
 
 implementation
 
+{ TSearchSettingsImpl }
 
-{ TQueryImpl }
-
-function TQueryImpl.Add(const AQuery: String;
-  const AOperation: TQueryOperation): IQuery;
-var
-  LTerm: TQueryTerm;
-begin
-  //initialize return and the query term
-  Result:=Self as IQuery;
-  LTerm.Text:=AQuery;
-  LTerm.Operation:=AOperation;
-
-  //we can exit if the term already exists
-  if FCollection.IndexOf(LTerm) > 0 then
-    Exit;
-
-  //add the term
-  FCollection.Add(LTerm);
-end;
-
-function TQueryImpl.Clear: IQuery;
-begin
-  Result:=Self as IQuery;
-  FCollection.Clear;
-end;
-
-constructor TQueryImpl.Create(Const AParent: ISearchSettings);
-begin
-  FCollection:=TQueryCollection.Create;
-  FParent:=AParent;
-end;
-
-destructor TQueryImpl.destroy;
-begin
-  FCollection.Free;
-  FParent:=nil;
-  inherited destroy;
-end;
-
-function TQueryImpl.GetCollection: TQueryCollection;
-begin
-  Result:=FCollection;
-end;
-
-function TQueryImpl.GetOperations: TQueryOperations;
-begin
-  Result:=DoGetSupportedOperations;
-end;
-
-function TQueryImpl.GetParent: ISearchSettings;
+function TSearchSettingsImpl.GetParent: ISearchAPI;
 begin
   Result:=FParent;
 end;
 
+function TSearchSettingsImpl.GetQuery: IQuery;
+begin
+  Result:=FQuery;
+end;
+
+constructor TSearchSettingsImpl.Create(const AParent: ISearchAPI;
+  Const AQuery: IQuery);
+begin
+  FParent:=AParent;
+  FQuery:=AQuery;
+end;
+
+destructor TSearchSettingsImpl.destroy;
+begin
+  FParent:=nil;
+  FQuery:=nil;
+  inherited destroy;
+end;
 
 end.
 
