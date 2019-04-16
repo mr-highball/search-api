@@ -348,8 +348,27 @@ type
     property Parent : ISearchAPI read GetParent;
   end;
 
-  { IResourceSettings }
+  { TRequestedResources }
+  (*
+    record for storing which resources the caller wants to search for
+  *)
+  TRequestedResources = record
+  strict private
+    FBins: TBinaryTypes;
+    FCategories: TResourceCategories;
+    FDocs: TDocumentTypes;
+    FURIs: TURITypes;
+  public
+    property Categories : TResourceCategories read FCategories write FCategories;
+    property URIs : TURITypes read FURIs write FURIs;
+    property Binaries : TBinaryTypes read FBins write FBins;
+    property Documents : TDocumentTypes read FDocs write FDocs;
+  end;
 
+  { IResourceSettings }
+  (*
+    contains properties related to what resources are to be searched for
+  *)
   IResourceSettings = interface
     ['{A3AC0556-7D00-4D73-A096-D709013583FE}']
     //--------------------------------------------------------------------------
@@ -357,9 +376,11 @@ type
     //--------------------------------------------------------------------------
     function GetCategories: TResourceCategories;
     function GetDocs: TDocumentTypes;
-    function GetMedia: TBinaryTypes;
+    function GetBinaries: TBinaryTypes;
     function GetParent: ISearchAPI;
+    function GetReqResources: TRequestedResources;
     function GetURIs: TURITypes;
+    procedure SetReqResources(Const AValue: TRequestedResources);
 
     //--------------------------------------------------------------------------
     //properties
@@ -377,7 +398,7 @@ type
     (*
       what media types are supported
     *)
-    property SupportedMedia : TBinaryTypes read GetMedia;
+    property SupportedBinaries : TBinaryTypes read GetBinaries;
 
     (*
       what document types are supported
@@ -385,9 +406,37 @@ type
     property SupportedDocuments : TDocumentTypes read GetDocs;
 
     (*
+      the type of resources the caller wants to search for
+    *)
+    property RequestedResources : TRequestedResources read GetReqResources write SetReqResources;
+
+    (*
       parent search api these settings belong to
     *)
     property Parent : ISearchAPI read GetParent;
+
+    //--------------------------------------------------------------------------
+    //methods
+    //--------------------------------------------------------------------------
+    (*
+      which categories to search for
+    *)
+    function Categories(Const ACategories : TResourceCategories) : IResourceSettings;
+
+    (*
+      which uri types to search for
+    *)
+    function URIs(Const AURIs : TURITypes) : IResourceSettings;
+
+    (*
+      which binary types to search for
+    *)
+    function Binaries(Const ABinaries : TBinaryTypes) : IResourceSettings;
+
+    (*
+      which document types to search for
+    *)
+    function Documents(Const ADocuments : TDocumentTypes) : IResourceSettings;
   end;
 
   { ISearchAPI }

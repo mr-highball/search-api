@@ -38,17 +38,20 @@ type
   TResourceSettingsImpl = class(TInterfacedObject,IResourceSettings)
   strict private
     FParent: ISearchAPI;
+    FReqRes: TRequestedResources;
   strict protected
     function GetCategories: TResourceCategories;
     function GetDocs: TDocumentTypes;
-    function GetMedia: TBinaryTypes;
+    function GetBinaries: TBinaryTypes;
     function GetParent: ISearchAPI;
     function GetURIs: TURITypes;
+    function GetReqResources: TRequestedResources;
+    procedure SetReqResources(Const AValue: TRequestedResources);
 
     //children override
     function DoGetCategories: TResourceCategories;virtual;abstract;
     function DoGetDocs: TDocumentTypes;virtual;abstract;
-    function DoGetMedia: TBinaryTypes;virtual;abstract;
+    function DoGetBinaries: TBinaryTypes;virtual;abstract;
     function DoGetURIs: TURITypes;virtual;abstract;
   public
     //--------------------------------------------------------------------------
@@ -56,13 +59,19 @@ type
     //--------------------------------------------------------------------------
     property SupportedCategories : TResourceCategories read GetCategories;
     property SupportedURIs : TURITypes read GetURIs;
-    property SupportedMedia : TBinaryTypes read GetMedia;
+    property SupportedBinaries : TBinaryTypes read GetBinaries;
     property SupportedDocuments : TDocumentTypes read GetDocs;
+    property RequestedResources : TRequestedResources read GetReqResources write SetReqResources;
     property Parent : ISearchAPI read GetParent;
 
     //--------------------------------------------------------------------------
     //methods
     //--------------------------------------------------------------------------
+    function Categories(Const ACategories : TResourceCategories) : IResourceSettings;
+    function URIs(Const AURIs : TURITypes) : IResourceSettings;
+    function Binaries(Const ABinaries : TBinaryTypes) : IResourceSettings;
+    function Documents(Const ADocuments : TDocumentTypes) : IResourceSettings;
+
     constructor Create(Const AParent: ISearchAPI);virtual;overload;
     destructor destroy; override;
   end;
@@ -81,9 +90,9 @@ begin
   Result:=DoGetDocs;
 end;
 
-function TResourceSettingsImpl.GetMedia: TBinaryTypes;
+function TResourceSettingsImpl.GetBinaries: TBinaryTypes;
 begin
-  Result:=DoGetMedia
+  Result:=DoGetBinaries
 end;
 
 function TResourceSettingsImpl.GetParent: ISearchAPI;
@@ -94,6 +103,39 @@ end;
 function TResourceSettingsImpl.GetURIs: TURITypes;
 begin
   Result:=DoGetURIs
+end;
+
+function TResourceSettingsImpl.GetReqResources: TRequestedResources;
+begin
+  Result:=FReqRes;
+end;
+
+procedure TResourceSettingsImpl.SetReqResources(
+  const AValue: TRequestedResources);
+begin
+  FReqRes:=AValue;
+end;
+
+function TResourceSettingsImpl.Categories(
+  const ACategories: TResourceCategories): IResourceSettings;
+begin
+  FReqRes.Categories:=ACategories;
+end;
+
+function TResourceSettingsImpl.URIs(const AURIs: TURITypes): IResourceSettings;
+begin
+  FReqRes.URIs:=AURIs;
+end;
+
+function TResourceSettingsImpl.Binaries(
+  const ABinaries: TBinaryTypes): IResourceSettings;
+begin
+  FReqRes.Binaries:=ABinaries;
+end;
+
+function TResourceSettingsImpl.Documents(const ADocuments: TDocumentTypes): IResourceSettings;
+begin
+  FReqRes.Documents:=ADocuments;
 end;
 
 constructor TResourceSettingsImpl.Create(const AParent: ISearchAPI);

@@ -16,7 +16,8 @@ uses
   search.query,
   search.settings,
   search.resourcesettings,
-  search.api;
+  search.api,
+  search.duckduckgo;
 
 {$R *.res}
 

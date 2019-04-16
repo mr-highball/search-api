@@ -103,10 +103,6 @@ end;
 
 function TSearchAPIImpl.GetResult: ISearchResult;
 begin
-  //if we haven't searched yet, then call go ahead and do so
-  if not Assigned(FResult) then
-    Search;
-
   Result:=FResult;
 end;
 
@@ -117,6 +113,7 @@ end;
 
 function TSearchAPIImpl.Search: ISearchResult;
 begin
+  { TODO -ohighball : validated requested settings before calling dosearch }
   FResult:=DoSearch;
   Result:=FResult;
 end;
